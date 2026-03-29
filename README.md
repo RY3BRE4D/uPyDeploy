@@ -19,9 +19,70 @@ A simple, clean deployment tool for extensive MicroPython projects using mpremot
 
 ## Requirements
 
-* mpremote
-* rsync
-* bash (Linux/macOS)
+* `bash` (Linux/macOS)
+* `mpremote`
+* `rsync`
+
+---
+
+## Install Dependencies
+
+### Ubuntu / Debian
+
+Install `pipx` and `rsync`:
+
+```bash
+sudo apt update
+sudo apt install -y pipx rsync
+```
+
+Ensure `pipx` is in your PATH:
+
+```bash
+pipx ensurepath
+```
+
+Then restart your terminal, or run:
+
+```bash
+source ~/.bashrc
+```
+
+Install `mpremote`:
+
+```bash
+pipx install mpremote
+```
+
+---
+
+### Other Linux Distributions (Not Tested)
+
+Install `pipx`:
+
+```bash
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath
+```
+
+Restart your terminal, then install `mpremote`:
+
+```bash
+pipx install mpremote
+```
+
+Install `rsync` using your distro’s package manager.
+
+---
+
+## Verify Installation
+
+```bash
+mpremote --help
+rsync --version
+```
+
+If both commands run successfully, you are ready to use `uPyDeploy`.
 
 ---
 
