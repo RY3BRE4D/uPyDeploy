@@ -12,6 +12,7 @@ A simple, clean deployment tool for extensive MicroPython projects using mpremot
 * Safe wipe (keeps `boot.py` by default)
 * Optional full wipe (`--full-wipe`)
 * Automatic exclusion of unwanted files
+* Project-level `.uPyDeployignore` support
 * Post-deploy verification using `rsync`
 * Automatic device reset
 
@@ -92,7 +93,7 @@ Clone the repo:
 
 ```bash
 git clone https://github.com/RY3BRE4D/uPyDeploy.git
-cd mpyDeploy
+cd uPyDeploy
 chmod +x deploy.sh
 ```
 
@@ -100,11 +101,7 @@ chmod +x deploy.sh
 
 ## Usage
 
-Deploy a project (myProject as an example, or see Example Projects):
-
-```bash
-./deploy.sh ./myProject
-```
+Deploy a project (myProject for demonstration purposes, or see Example Project in examples):
 
 ```bash
 ./deploy.sh ./myProject
@@ -136,7 +133,7 @@ The directory you pass becomes the root of the device.
 
 Example:
 
-```
+```text
 myProject/
   main.py
   lib/
@@ -144,29 +141,79 @@ myProject/
 
 Will deploy as:
 
-```
+```text
 /main.py
 /lib/
 ```
 
 ---
 
+## Deployment Filtering (`.uPyDeployignore`)
+
+By default, `uPyDeploy` excludes common development files such as:
+
+```text
+.git/
+__pycache__/
+*.pyc
+venv/
+```
+
+You can define additional exclusions per project using a `.uPyDeployignore` file in your project root.
+
+### Example
+
+```text
+myProject/
+  main.py
+  docs/
+  README.md
+  .uPyDeployignore
+```
+
+### `.uPyDeployignore`
+
+```text
+README.md
+docs/
+*.md
+```
+
+### Result
+
+| File        | Deployed |
+|-------------|----------|
+| `main.py`   | ✅ Yes   |
+| `docs/`     | ❌ No    |
+| `README.md` | ❌ No    |
+
+---
+
+## How It Works
+
+1. Project is copied into a temporary staging directory
+2. Default exclusions are applied
+3. `.uPyDeployignore` is applied (if present)
+4. Device is wiped (optionally keeping `boot.py`)
+5. Staged files are uploaded
+6. Device is inspected and verified using `rsync`
+7. Device is reset
+
+---
+
 ## Example Projects
 
-### Demo Project Example
-
-Deploy a multi-file project with nested directories:
+### Demo Project
 
 ```bash
 ./deploy.sh ./examples/demoProject
 ```
 
-This example demonstrates deployment of:
+This example demonstrates:
 
-* `main.py`
-* `apps/`
-* `lib/`
-* `config/`
+* Multi-file deployment
+* Nested directories
+* `.uPyDeployignore` usage
 
 See `examples/demoProject/README.md` for details.
 
@@ -174,18 +221,16 @@ See `examples/demoProject/README.md` for details.
 
 ## Why This Exists
 
-MicroPython deployment is often manual and error-prone.
-This tool provides a repeatable, verifiable deployment workflow.
+MicroPython deployment is often manual and error-prone.  
+This tool provides a repeatable, reliable deployment workflow with proper file filtering.
 
 ---
 
 ## Potentially Coming Soon
 
-* `.uPyDeployignore` support
 * Incremental sync mode
-* Windows support
 * CLI install (`upy-deploy`)
-* Python rewrite for cross-platform support
+* Python rewrite for cross-platform support (Windows?)
 
 ---
 

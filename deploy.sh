@@ -6,22 +6,29 @@ set -euo pipefail
 KEEP_BOOT=true
 PORT=""
 PROJECT_DIR=""
+PROJECT_NAME=""
 TEMP_DIR=""
 STAGING_DIR=""
 DUMP_DIR=""
 DEVICE_LIST_FILE=""
+IGNORE_FILE=""
 
-EXCLUDES=(
-    ".git"
+DEFAULT_EXCLUDES=(
+    ".git/"
+    ".github/"
     ".gitignore"
-    "__pycache__"
+    ".uPyDeployignore"
+    "__pycache__/"
     ".DS_Store"
     "Thumbs.db"
-    "venv"
-    ".venv"
+    "venv/"
+    ".venv/"
+    "env/"
     "*.pyc"
     "*.pyo"
 )
+
+RSYNC_FILTER_ARGS=()
 
 showUsage() {
     cat <<EOF
@@ -111,6 +118,10 @@ parseArgs() {
         echo "ERROR: Project Directory '$PROJECT_DIR' Does Not Exist"
         exit 1
     fi
+
+    PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
+    PROJECT_NAME="$(basename "$PROJECT_DIR")"
+    IGNORE_FILE="$PROJECT_DIR/.uPyDeployignore"
 }
 
 prepareTempDirs() {
@@ -164,15 +175,42 @@ choosePort() {
     PORT="${ports[$portIndex]}"
 }
 
+buildRsyncFilterArgs() {
+    RSYNC_FILTER_ARGS=()
+
+    local excludePattern
+    for excludePattern in "${DEFAULT_EXCLUDES[@]}"; do
+        RSYNC_FILTER_ARGS+=(--exclude="$excludePattern")
+    done
+
+    if [ -f "$IGNORE_FILE" ]; then
+        RSYNC_FILTER_ARGS+=(--exclude-from="$IGNORE_FILE")
+    fi
+}
+
+showFilterInfo() {
+    echo
+    echo "Using Default Excludes:"
+    local excludePattern
+    for excludePattern in "${DEFAULT_EXCLUDES[@]}"; do
+        echo "  - $excludePattern"
+    done
+
+    echo
+    if [ -f "$IGNORE_FILE" ]; then
+        echo "Using Project Ignore File: $IGNORE_FILE"
+    else
+        echo "No Project Ignore File Found"
+    fi
+}
+
 buildStagingCopy() {
     echo
     echo "Building Staging Copy..."
-    cp -a "$PROJECT_DIR"/. "$STAGING_DIR"/
 
-    local excludeName
-    for excludeName in "${EXCLUDES[@]}"; do
-        find "$STAGING_DIR" -name "$excludeName" -exec rm -rf {} + 2>/dev/null || true
-    done
+    rsync -av --delete \
+        "${RSYNC_FILTER_ARGS[@]}" \
+        "$PROJECT_DIR"/ "$STAGING_DIR"/
 }
 
 readDeviceRoot() {
@@ -232,19 +270,11 @@ verifyDeploy() {
     echo "===== VERIFYING SYNC ====="
 
     rsync -avnc --delete \
-        --exclude ".git" \
-        --exclude ".gitignore" \
-        --exclude "__pycache__" \
-        --exclude ".DS_Store" \
-        --exclude "Thumbs.db" \
-        --exclude "venv" \
-        --exclude ".venv" \
-        --exclude "*.pyc" \
-        --exclude "*.pyo" \
+        "${RSYNC_FILTER_ARGS[@]}" \
         "$STAGING_DIR"/ "$DUMP_DIR"/
 
     echo
-    echo "If No Files Are Listed Above, Device Matches Local Project"
+    echo "If No Files Are Listed Above, Device Matches Local Deploy Payload"
 }
 
 resetDevice() {
@@ -266,10 +296,12 @@ main() {
 
     prepareTempDirs
     choosePort
+    buildRsyncFilterArgs
 
     echo
     echo "===== STARTING DEPLOY ====="
     echo "Project Directory: $PROJECT_DIR"
+    echo "Project Name: $PROJECT_NAME"
     echo "Using Port: $PORT"
 
     if [ "$KEEP_BOOT" = true ]; then
@@ -278,6 +310,7 @@ main() {
         echo "boot.py Handling: Remove boot.py"
     fi
 
+    showFilterInfo
     buildStagingCopy
     readDeviceRoot
     wipeDeviceRoot
